@@ -56,8 +56,7 @@ async function fetchHtml(url) {
   const res = await fetch(url, {
     headers: {
       "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept-Language": "cs-CZ,cs;q=0.9",
+        "Mozilla/5.0 (compatible; HazenaPisekTV-Scraper/1.0)",
     },
   });
   if (!res.ok) {
@@ -77,49 +76,43 @@ function matchKey(m) {
 }
 
 // Vyparsuje jeden <a href="/Zapas/Sport-Hazena/Soutez-Hazena-Extraliga-zeny/...">
+// odkaz z textu odkazu. Formát textu tak, jak ho tvcom vykresluje:
+//   "video 4. 10.15:00 Sokol Písek - Handball Hodonín Házená DOPRASTAV liga ženZákladní část"
+//   "video 20. 12. 202515:00 Sokol Písek - DHK Baník Most Házená MOL liga ženZákladní část"
+//   "video 20. 5.18:00 Sokol Písek - DHK Baník Most Házená DOPRASTAV liga ženPlay-off"
+// Název ligy se v čase mění podle sponzora (MOL / DOPRASTAV …), proto se
+// jako oddělovač mezi soupeři a fází kotvíme na koncovku "liga žen".
+// Rok mimo aktuální rok bývá v textu; jinak ho dopočteme ze sezóny v URL.
 export function parseMatchAnchor(href, rawText) {
-  if (!href || !href.toLowerCase().includes("/soutez-hazena-extraliga-zeny/")) {
+  if (!href || !href.includes("/Zapas/Sport-Hazena/Soutez-Hazena-Extraliga-zeny/")) {
     return null;
   }
 
-  // 1. Odstranění úvodního balastu (video, tečky, studio)
   let text = rawText.replace(/\s+/g, " ").trim();
-  text = text.replace(/^video\.?\s*/i, "");
-  text = text.replace(/Studio\s+Házená\.?\s*/i, "");
+  text = text.replace(/^video\s*/i, "");
+  text = text.replace(/Studio\s+Házená/i, "");
 
-  // 2. Datum a čas (podporuje "4. 10. 15:00", "4. 10. 2025 15:00", "4. 10. 202515:00")
-  const dateMatch = text.match(/^(\d{1,2})\.\s*(\d{1,2})\.(?:\s*(\d{4}))?\s*(\d{1,2}:\d{2})\.?\s*(.+)$/);
+  const dateMatch = text.match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})?(\d{1,2}:\d{2})\s*(.+)$/);
   if (!dateMatch) return null;
   const [, day, month, yearInText, time, rest] = dateMatch;
 
-  // 3. Týmy a fáze
-  // Zkouší oddělit týmy a soutěž/fázi (kotva na "liga žen" nebo dělení přes pomlčku)
-  const teamsMatch = rest.match(/^(.+?)\s+-\s+(.+?)(?:\.|\s)+(?:Házená\s+)?(?:\S+\s+)?liga\s+žen\.?\s*(.*)$/i);
-
-  let home = "";
-  let away = "";
-  let phase = "";
-
-  if (teamsMatch) {
-    home = teamsMatch[1].trim();
-    away = teamsMatch[2].trim();
-    phase = teamsMatch[3]?.trim() || "";
-  } else {
-    const parts = rest.split(" - ");
-    if (parts.length < 2) return null;
-    home = parts[0].trim();
-    away = parts[1].split(".")[0].trim();
-  }
+  // Formát: "{Domácí} - {Hosté} Házená {…název ligy…} liga žen{Fáze}".
+  // Oddělovač týmů vyžaduje mezery kolem pomlčky (aby se nerozbila jména typu
+  // "Frýdek-Místek"); od soupeřů se odděluje kotvou " Házená … liga žen".
+  const teamsMatch = rest.match(/^(.+?)\s+-\s+(.+?)\s+Házená\s+\S.*?liga\s+žen(.+)$/);
+  if (!teamsMatch) return null;
+  const home = teamsMatch[1].trim();
+  const away = teamsMatch[2].trim();
+  const phase = teamsMatch[3].trim();
 
   if (!home.includes(TEAM_MARK) && !away.includes(TEAM_MARK)) return null;
 
-  // 4. Určení roku ze sezóny v URL, pokud chybí v textu
   let year = yearInText;
   if (!year) {
-    const seasonMatch = href.match(/Sezona-(\d{4})-(\d{4})/i);
+    const seasonMatch = href.match(/Sezona-(\d{4})-(\d{4})/);
     if (seasonMatch) {
       const [, y1, y2] = seasonMatch;
-      year = Number(month) >= 8 ? y1 : y2;
+      year = Number(month) >= 8 ? y1 : y2; // srpen-prosinec => první rok sezóny
     }
   }
   if (!year) return null;
@@ -148,6 +141,8 @@ async function getTeamMatches(leagueUrls) {
     try {
       html = await fetchHtml(url);
     } catch (e) {
+      // Stránka nové sezóny nemusí ještě existovat (přelom sezón) — jen
+      // přeskočíme, ať kvůli tomu nespadne celý běh a nepřijdeme o historii.
       console.warn(`  ! přeskakuji ${url}: ${e.message}`);
       await sleep(REQUEST_DELAY_MS);
       continue;
@@ -229,7 +224,7 @@ async function main() {
     });
   }
 
-  // Starším záznamům sezónu dopočítáme
+  // Starším záznamům (z doby před zavedením "season") sezónu dopočítáme.
   for (const [key, m] of merged) {
     if (!m.season) merged.set(key, { ...m, season: computeSeason(m.date) });
   }
