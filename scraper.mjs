@@ -1,26 +1,4 @@
 // Házená Písek TV — scraper
-//
-// Co dělá:
-// 1. Stáhne stránku ligy žen v házené na tvcom.cz (server-rendered HTML) pro aktuální
-//    a (dle nastavení) minulé sezóny.
-// 2. Vyfiltruje jen zápasy Písku (podle "Písek" v názvu týmu — v téhle
-//    soutěži je jediný Písek "Sokol Písek", takže shoda na "Písek" je bezpečná;
-//    mládežnické týmy Písku hrají jiné soutěže a do výběru se nepletou).
-// 3. U zápasů, které ještě nemáme vyřešené (bez embed GUID), stáhne detail
-//    zápasu a vytáhne z něj <iframe src="//embed.tvcom.cz/{GUID}/">.
-// 4. VÝSLEDEK SLOUČÍ s tím, co už v data/matches.json bylo — nikdy ho celý
-//    nepřepisuje. Tvcom defaultně ukazuje jen aktuální sezónu, takže bez
-//    sloučení by scraper při přechodu na novou sezónu tiše smazal historii
-//    té předchozí. Každému zápasu navíc přiřadí "season" (např. "2025/2026"),
-//    podle kterého web nabízí přepínač sezón.
-//
-// Spouští se přes GitHub Actions (viz .github/workflows/scrape.yml), žádný
-// ruční krok. Lokálně jde spustit přes: node scraper.mjs
-//
-// Hloubka zpětného scanu se řídí proměnnou prostředí SEASONS_BACK
-// (výchozí 1 = aktuální + minulá sezóna). Pro jednorázové doplnění starší
-// historie stačí při ručním spuštění workflow zadat vyšší číslo do políčka
-// "seasons_back" — jednou vyřešený embed se pak už jen znovupoužije.
 
 import fs from "node:fs";
 import * as cheerio from "cheerio";
@@ -28,22 +6,62 @@ import * as cheerio from "cheerio";
 const BASE = "https://www.tvcom.cz";
 const TEAM_MARK = "Písek";
 const OUT_PATH = "data/matches.json";
-const REQUEST_DELAY_MS = 500; // ať na tvcom zbytečně nebušíme
+const REQUEST_DELAY_MS = 500;
 
-// Kolik sezón zpět kromě aktuální procházet. Výchozí 1; přepsatelné přes env
-// (workflow_dispatch input -> env SEASONS_BACK) pro hlubší jednorázový backfill.
 const SEASONS_BACK = Math.max(0, parseInt(process.env.SEASONS_BACK ?? "1", 10) || 0);
+
+// Přesný seznam týmů v soutěži pro spolehlivou normalizaci
+const KNOWN_TEAMS = [
+  "Sokol Písek",
+  "DHK Baník Most",
+  "Házená Kynžvart",
+  "DHK ZORA Olomouc",
+  "DHC Plzeň",
+  "DHC Slavia Praha",
+  "TJ Sokol Poruba",
+  "Handball Hodonín",
+  "Handball club Zlín",
+  "HC DAC Dunajská Streda",
+  "IUVENTA Michalovce",
+  "HK Slovan Duslo Šaľa",
+  "HC Tatran Stupava",
+  "KPR Kobierzyce",
+  "MKS Zaglebie Lubin"
+];
+
+function cleanTeamName(name) {
+  if (!name) return "";
+  let clean = name.trim();
+
+  // Odstranění přilepených ligových suffixů (i bez mezer)
+  clean = clean.replace(/(?:Házená)?(?:DOPRASTAV|MOL|WHIL)?(?:Extraliga|liga)?(?:zeny|žen)?.*$/i, "").trim();
+  clean = clean.replace(/(?:Základní část|Play-?off).*$/i, "").trim();
+  clean = clean.replace(/\.$/, "").trim();
+
+  // Vyhledání shody v seznamu známých týmů
+  const lower = clean.toLowerCase();
+  for (const t of KNOWN_TEAMS) {
+    if (lower === t.toLowerCase() || lower.startsWith(t.toLowerCase())) {
+      return t;
+    }
+  }
+
+  // Fallback pokud jde o Písek
+  if (lower.includes("písek") || lower.includes("pisek")) {
+    return "Sokol Písek";
+  }
+
+  return clean;
+}
 
 function seasonSlug(now, seasonsBack) {
   const y = now.getFullYear();
-  const m = now.getMonth() + 1; // 1-12
-  let startYear = m >= 8 ? y : y - 1; // sezóna běží srpen -> červenec
+  const m = now.getMonth() + 1;
+  let startYear = m >= 8 ? y : y - 1;
   startYear -= seasonsBack;
   return `${startYear}-${startYear + 1}`;
 }
 
-// Adresy aktuální + N minulých sezón, počítané dynamicky podle dnešního data
-// (kód se nemusí každý rok ručně upravovat).
 function buildLeagueUrls(now) {
   return Array.from({ length: SEASONS_BACK + 1 }, (_, back) =>
     `${BASE}/Zapasy/Sport-Hazena/Soutez-Hazena-Extraliga-zeny/Sezona-${seasonSlug(now, back)}/`
@@ -66,7 +84,6 @@ async function fetchHtml(url) {
   return await res.text();
 }
 
-// "5. 5. 2026" -> "2025/2026" (sezóna běží srpen-červenec)
 function computeSeason(dateStr) {
   const [day, month, year] = dateStr.split(".").map((s) => parseInt(s.trim(), 10));
   return month >= 8 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
@@ -76,44 +93,32 @@ function matchKey(m) {
   return `${m.date}|${m.time}|${m.home}|${m.away}`;
 }
 
-// Vyparsuje jeden <a href="/Zapas/Sport-Hazena/Soutez-Hazena-Extraliga-zeny/...">
 export function parseMatchAnchor(href, rawText) {
   if (!href || !href.toLowerCase().includes("/soutez-hazena-extraliga-zeny/")) {
     return null;
   }
 
-  // 1. Očištění balastu na začátku
   let text = rawText.replace(/\s+/g, " ").trim();
   text = text.replace(/^video\.?\s*/i, "");
   text = text.replace(/Studio\s+Házená\.?\s*/i, "");
 
-  // 2. Extrakce data a času
   const dateMatch = text.match(/^(\d{1,2})\.\s*(\d{1,2})\.(?:\s*(\d{4}))?\s*(\d{1,2}:\d{2})\.?\s*(.+)$/);
   if (!dateMatch) return null;
   const [, day, month, yearInText, time, rest] = dateMatch;
 
-  // 3. Extrakce týmů a fáze
-  // Kotvíme na konec textu s ligovými koncovkami
-  const leagueAnchorMatch = rest.match(/^(.*?)\s+(?:(?:Házená\s+)?(?:MOL\s+|DOPRASTAV\s+|WHIL\s+)?(?:Extraliga|liga)\s+žen|Základní část|Play-off)(.*)$/i);
+  const parts = rest.split(/\s+-\s+/);
+  if (parts.length < 2) return null;
 
-  const matchPart = leagueAnchorMatch ? leagueAnchorMatch[1].trim() : rest;
-
-  // Rozdělení podle pomlčky
-  const teams = matchPart.split(/\s+-\s+/);
-  if (teams.length < 2) return null;
-
-  const home = teams[0].trim().replace(/\.$/, "");
-  const away = teams[1].trim().replace(/\.$/, "");
+  const home = cleanTeamName(parts[0]);
+  const away = cleanTeamName(parts.slice(1).join(" - "));
 
   if (!home.includes(TEAM_MARK) && !away.includes(TEAM_MARK)) return null;
 
-  // 4. Určení fáze (Play-off vs Základní část)
   let phase = "Základní část";
-  if (rawText.toLowerCase().includes("play-off") || href.toLowerCase().includes("play-off")) {
+  if (/play-?off/i.test(rawText) || /play-?off/i.test(href)) {
     phase = "Play-off";
   }
 
-  // 5. Určení roku ze sezóny v URL, pokud chybí v textu
   let year = yearInText;
   if (!year) {
     const seasonMatch = href.match(/Sezona-(\d{4})-(\d{4})/i);
@@ -173,19 +178,6 @@ async function getEmbedId(matchUrl) {
   return m ? m[1] : null;
 }
 
-// Načte, co už v repu máme — napříč VŠEMI dosud viděnými sezónami.
-function loadExisting() {
-  const map = new Map();
-  if (!fs.existsSync(OUT_PATH)) return map;
-  try {
-    const prev = JSON.parse(fs.readFileSync(OUT_PATH, "utf8"));
-    for (const m of prev) map.set(matchKey(m), m);
-  } catch (e) {
-    console.warn(`Nepodařilo se přečíst existující ${OUT_PATH}, začínám od nuly: ${e.message}`);
-  }
-  return map;
-}
-
 function toTimestamp(m) {
   const [d, mo, y] = m.date.split(".").map((s) => Number(s.trim()));
   const [hh, mm] = m.time.split(":").map(Number);
@@ -197,27 +189,23 @@ async function main() {
   const leagueUrls = buildLeagueUrls(now);
   console.log(`Stahuji rozpis ligy žen v házené (aktuální + ${SEASONS_BACK} zpět):`);
   const found = await getTeamMatches(leagueUrls);
-  console.log(`Nalezeno ${found.length} zápasů Sokola Písek na tvcom.cz`);
+  console.log(`Nalezeno ${found.length} zápasů Sokola Písek`);
 
-  // Start: vše, co už máme uložené (klidně i z dřívějších sezón).
-  const merged = loadExisting();
-  console.log(`V repu už bylo ${merged.size} zápasů (napříč sezónami)`);
+  // Začneme s čistou mapou nově vyparsovaných dat
+  const resultMatches = new Map();
 
   for (const m of found) {
     const key = matchKey(m);
-    const existing = merged.get(key);
-    let embed = existing?.embed ?? null;
+    let embed = null;
 
-    if (!embed) {
-      try {
-        embed = await getEmbedId(m.url);
-        await sleep(REQUEST_DELAY_MS);
-      } catch (e) {
-        console.warn(`  ! Nepodařilo se načíst detail (${m.url}): ${e.message}`);
-      }
+    try {
+      embed = await getEmbedId(m.url);
+      await sleep(REQUEST_DELAY_MS);
+    } catch (e) {
+      console.warn(`  ! Nepodařilo se načíst detail (${m.url}): ${e.message}`);
     }
 
-    merged.set(key, {
+    resultMatches.set(key, {
       date: m.date,
       time: m.time,
       home: m.home,
@@ -229,12 +217,7 @@ async function main() {
     });
   }
 
-  // Starším záznamům sezónu dopočítáme
-  for (const [key, m] of merged) {
-    if (!m.season) merged.set(key, { ...m, season: computeSeason(m.date) });
-  }
-
-  const result = [...merged.values()].sort((a, b) => toTimestamp(b) - toTimestamp(a));
+  const result = [...resultMatches.values()].sort((a, b) => toTimestamp(b) - toTimestamp(a));
 
   fs.mkdirSync("data", { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(result, null, 2) + "\n", "utf8");
