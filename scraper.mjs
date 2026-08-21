@@ -10,48 +10,48 @@ const REQUEST_DELAY_MS = 500;
 
 const SEASONS_BACK = Math.max(0, parseInt(process.env.SEASONS_BACK ?? "1", 10) || 0);
 
-// Přesný seznam týmů v soutěži pro spolehlivou normalizaci
+// Přesný seznam týmů v soutěži (seřazený od nejdelších názvů pro bezpečné vyhledání)
 const KNOWN_TEAMS = [
-  "Sokol Písek",
+  "HC DAC Dunajská Streda",
+  "HK Slovan Duslo Šaľa",
+  "Handball club Zlín",
+  "AHT HC Tatran Stupava",
+  "HC Tatran Stupava",
+  "IUVENTA Michalovce",
   "DHK Baník Most",
   "Házená Kynžvart",
   "DHK ZORA Olomouc",
-  "DHC Plzeň",
   "DHC Slavia Praha",
   "TJ Sokol Poruba",
   "Handball Hodonín",
-  "Handball club Zlín",
-  "HC DAC Dunajská Streda",
-  "IUVENTA Michalovce",
-  "HK Slovan Duslo Šaľa",
-  "HC Tatran Stupava",
+  "MKS Zaglebie Lubin",
   "KPR Kobierzyce",
-  "MKS Zaglebie Lubin"
+  "DHC Plzeň",
+  "Sokol Písek"
 ];
 
 function cleanTeamName(name) {
   if (!name) return "";
-  let clean = name.trim();
+  const clean = name.replace(/\s+/g, " ").trim();
 
-  // Odstranění přilepených ligových suffixů (i bez mezer)
-  clean = clean.replace(/(?:Házená)?(?:DOPRASTAV|MOL|WHIL)?(?:Extraliga|liga)?(?:zeny|žen)?.*$/i, "").trim();
-  clean = clean.replace(/(?:Základní část|Play-?off).*$/i, "").trim();
-  clean = clean.replace(/\.$/, "").trim();
-
-  // Vyhledání shody v seznamu známých týmů
-  const lower = clean.toLowerCase();
-  for (const t of KNOWN_TEAMS) {
-    if (lower === t.toLowerCase() || lower.startsWith(t.toLowerCase())) {
-      return t;
+  // 1. Zkusíme najít přesnou shodu ze seznamu známých týmů
+  for (const team of KNOWN_TEAMS) {
+    if (clean.toLowerCase().includes(team.toLowerCase())) {
+      return team;
     }
   }
 
-  // Fallback pokud jde o Písek
-  if (lower.includes("písek") || lower.includes("pisek")) {
+  // 2. Pokud jde o Písek v jiném tvaru
+  if (/písek|pisek/i.test(clean)) {
     return "Sokol Písek";
   }
 
-  return clean;
+  // 3. Fallback: odříznutí ligových koncovek a balastu
+  return clean
+    .replace(/(?:Házená\s+)?(?:DOPRASTAV|MOL|WHIL)\s+(?:Extraliga|liga)\s+žen.*$/i, "")
+    .replace(/(?:Házená)?(?:DOPRASTAV|MOL|WHIL).*$/i, "")
+    .replace(/\.$/, "")
+    .trim();
 }
 
 function seasonSlug(now, seasonsBack) {
@@ -191,7 +191,6 @@ async function main() {
   const found = await getTeamMatches(leagueUrls);
   console.log(`Nalezeno ${found.length} zápasů Sokola Písek`);
 
-  // Začneme s čistou mapou nově vyparsovaných dat
   const resultMatches = new Map();
 
   for (const m of found) {
