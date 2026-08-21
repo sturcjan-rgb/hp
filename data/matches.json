@@ -1,1 +1,239 @@
-[]
+[
+  {
+    "date": "20. 5. 2026",
+    "time": "18:00",
+    "home": "Sokol Písek",
+    "away": "DHK Baník Most",
+    "phase": "Play-off",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "16. 5. 2026",
+    "time": "18:00",
+    "home": "DHK Baník Most",
+    "away": "Sokol Písek",
+    "phase": "Play-off",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "13. 5. 2026",
+    "time": "17:00",
+    "home": "Házená Kynžvart",
+    "away": "Sokol Písek",
+    "phase": "Play-off",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "9. 5. 2026",
+    "time": "18:00",
+    "home": "Sokol Písek",
+    "away": "Házená Kynžvart",
+    "phase": "Play-off",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "3. 5. 2026",
+    "time": "16:00",
+    "home": "Házená Kynžvart",
+    "away": "Sokol Písek",
+    "phase": "Play-off",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "25. 4. 2026",
+    "time": "18:00",
+    "home": "Sokol Písek",
+    "away": "DHK ZORA Olomouc",
+    "phase": "Play-off",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "18. 4. 2026",
+    "time": "17:30",
+    "home": "DHK ZORA Olomouc",
+    "away": "Sokol Písek",
+    "phase": "Play-off",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "1. 4. 2026",
+    "time": "18:00",
+    "home": "Sokol Písek",
+    "away": "HC DAC Dunajská Streda",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "28. 3. 2026",
+    "time": "18:00",
+    "home": "DHK Baník Most",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "21. 3. 2026",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "DHC Slavia Praha",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "15. 3. 2026",
+    "time": "17:00",
+    "home": "Házená Kynžvart",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "21. 2. 2026",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "TJ Sokol Poruba",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "7. 2. 2026",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "DHC Plzeň",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "1. 2. 2026",
+    "time": "16:00",
+    "home": "Handball Hodonín",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "24. 1. 2026",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "DHK ZORA Olomouc",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "17. 1. 2026",
+    "time": "16:00",
+    "home": "Handball club Zlín",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "10. 1. 2026",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "HK Slovan Duslo Šaľa",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026",
+    "embed": "76ad210b-97e7-4853-bb83-3143d6006ab1"
+  },
+  {
+    "date": "20. 12. 2025",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "DHK Baník Most",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026",
+    "embed": "368c293b-1c21-4704-a86c-8d0f5f0982f9"
+  },
+  {
+    "date": "15. 11. 2025",
+    "time": "15:00",
+    "home": "DHC Slavia Praha",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "5. 11. 2025",
+    "time": "18:00",
+    "home": "Sokol Písek",
+    "away": "Házená Kynžvart",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026",
+    "embed": "d4b0b3fe-d606-4b23-89ff-c41d6c5e9892"
+  },
+  {
+    "date": "1. 11. 2025",
+    "time": "18:00",
+    "home": "TJ Sokol Poruba",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "25. 10. 2025",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "IUVENTA Michalovce",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "11. 10. 2025",
+    "time": "18:00",
+    "home": "DHC Plzeň",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "4. 10. 2025",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "Handball Hodonín",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  },
+  {
+    "date": "27. 9. 2025",
+    "time": "17:30",
+    "home": "DHK ZORA Olomouc",
+    "away": "Sokol Písek",
+    "phase": "Základní část",
+    "us": "away",
+    "season": "2025/2026"
+  },
+  {
+    "date": "14. 9. 2025",
+    "time": "15:00",
+    "home": "Sokol Písek",
+    "away": "Handball club Zlín",
+    "phase": "Základní část",
+    "us": "home",
+    "season": "2025/2026"
+  }
+]
