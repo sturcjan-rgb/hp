@@ -1,0 +1,13 @@
+{
+  "name": "hazena-pisek-tv-scraper",
+  "version": "1.0.0",
+  "description": "Scraper, který stahuje rozpis a video embedy zápasů Sokola Písek (házená, liga žen) z tvcom.cz",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "scrape": "node scraper.mjs"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  }
+}
