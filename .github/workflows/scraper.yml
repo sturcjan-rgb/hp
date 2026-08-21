@@ -1,0 +1,46 @@
+name: Aktualizace zápasů Házená Písek TV
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # každé 2 hodiny
+  workflow_dispatch:
+    inputs:
+      seasons_back:
+        description: "Kolik sezón zpět procházet (výchozí 1). Vyšší číslo = jednorázový hlubší backfill historie."
+        required: false
+        default: "1"
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repozitáře
+        uses: actions/checkout@v4
+
+      - name: Nastavení Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Instalace závislostí
+        run: npm install
+
+      - name: Spuštění scraperu
+        env:
+          SEASONS_BACK: ${{ github.event.inputs.seasons_back || '1' }}
+        run: node scraper.mjs
+
+      - name: Uložení změn (pokud nějaké jsou)
+        run: |
+          git config user.name "hazena-pisek-tv-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/matches.json
+          if git diff --staged --quiet; then
+            echo "Žádné změny v datech zápasů."
+          else
+            git commit -m "chore: aktualizace zápasů Házená Písek TV"
+            git push
+          fi
