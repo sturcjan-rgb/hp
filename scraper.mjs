@@ -82,38 +82,38 @@ export function parseMatchAnchor(href, rawText) {
     return null;
   }
 
-  // 1. Odstranění úvodního balastu (video, tečky, studio)
+  // 1. Očištění balastu na začátku
   let text = rawText.replace(/\s+/g, " ").trim();
   text = text.replace(/^video\.?\s*/i, "");
   text = text.replace(/Studio\s+Házená\.?\s*/i, "");
 
-  // 2. Datum a čas (podporuje "4. 10. 15:00", "4. 10. 2025 15:00", "4. 10. 202515:00")
+  // 2. Extrakce data a času
   const dateMatch = text.match(/^(\d{1,2})\.\s*(\d{1,2})\.(?:\s*(\d{4}))?\s*(\d{1,2}:\d{2})\.?\s*(.+)$/);
   if (!dateMatch) return null;
   const [, day, month, yearInText, time, rest] = dateMatch;
 
-  // 3. Týmy a fáze
-  // Zkouší oddělit týmy a soutěž/fázi (kotva na "liga žen" nebo dělení přes pomlčku)
-  const teamsMatch = rest.match(/^(.+?)\s+-\s+(.+?)(?:\.|\s)+(?:Házená\s+)?(?:\S+\s+)?liga\s+žen\.?\s*(.*)$/i);
+  // 3. Extrakce týmů a fáze
+  // Kotvíme na konec textu s ligovými koncovkami
+  const leagueAnchorMatch = rest.match(/^(.*?)\s+(?:(?:Házená\s+)?(?:MOL\s+|DOPRASTAV\s+|WHIL\s+)?(?:Extraliga|liga)\s+žen|Základní část|Play-off)(.*)$/i);
 
-  let home = "";
-  let away = "";
-  let phase = "";
+  const matchPart = leagueAnchorMatch ? leagueAnchorMatch[1].trim() : rest;
 
-  if (teamsMatch) {
-    home = teamsMatch[1].trim();
-    away = teamsMatch[2].trim();
-    phase = teamsMatch[3]?.trim() || "";
-  } else {
-    const parts = rest.split(" - ");
-    if (parts.length < 2) return null;
-    home = parts[0].trim();
-    away = parts[1].split(".")[0].trim();
-  }
+  // Rozdělení podle pomlčky
+  const teams = matchPart.split(/\s+-\s+/);
+  if (teams.length < 2) return null;
+
+  const home = teams[0].trim().replace(/\.$/, "");
+  const away = teams[1].trim().replace(/\.$/, "");
 
   if (!home.includes(TEAM_MARK) && !away.includes(TEAM_MARK)) return null;
 
-  // 4. Určení roku ze sezóny v URL, pokud chybí v textu
+  // 4. Určení fáze (Play-off vs Základní část)
+  let phase = "Základní část";
+  if (rawText.toLowerCase().includes("play-off") || href.toLowerCase().includes("play-off")) {
+    phase = "Play-off";
+  }
+
+  // 5. Určení roku ze sezóny v URL, pokud chybí v textu
   let year = yearInText;
   if (!year) {
     const seasonMatch = href.match(/Sezona-(\d{4})-(\d{4})/i);
